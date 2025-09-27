@@ -199,42 +199,77 @@ const RentLocationContent: React.FC<RentLocationContentProps> = ({ location, bus
         </div>
       </div>
 
-      {/* Rent Calculator */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Calculator className="w-5 h-5 text-blue-600" />
-          Quick Rent Calculator
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Space Size (sq ft)
-            </label>
-            <input
-              type="number"
-              defaultValue="1000"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+      {/* Rent Calculator (drop-in, no hooks/imports needed) */}
+        <div
+          className="bg-white rounded-xl shadow-md p-6"
+          onInput={(e) => {
+            const root = e.currentTarget as HTMLDivElement;
+            const size = Number(
+              (root.querySelector('#rc-size') as HTMLInputElement)?.value || 0
+            );
+            const rate = Number(
+              (root.querySelector('#rc-rate') as HTMLInputElement)?.value || 0
+            );
+            const monthly = size * rate;
+
+            const fmt = (n: number) =>
+              isFinite(n)
+                ? n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : '0.00';
+
+            const out = root.querySelector('#rc-result') as HTMLElement | null;
+            const note = root.querySelector('#rc-note') as HTMLElement | null;
+            if (out) out.textContent = fmt(monthly);
+            if (note) note.textContent = `(Based on ${fmt(rate)} RM/sq ft × ${size.toLocaleString()} sq ft)`;
+          }}
+        >
+          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Calculator className="w-5 h-5 text-blue-600" />
+            Quick Rent Calculator
+          </h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Space Size (sq ft)
+              </label>
+              <input
+                id="rc-size"
+                type="number"
+                defaultValue={1000}
+                min={0}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rent per sq ft (RM)
+              </label>
+              <input
+                id="rc-rate"
+                type="number"
+                defaultValue={rentData.averageRent}
+                step="0.50"
+                min={0}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Rent per sq ft (RM)
-            </label>
-            <input
-              type="number"
-              defaultValue={rentData.averageRent}
-              step="0.50"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+            <div className="text-sm text-blue-800 mb-1">Estimated Monthly Rent</div>
+            <div className="text-2xl font-bold text-blue-900">
+              RM <span id="rc-result">
+                {(rentData.averageRent * 1000).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div id="rc-note" className="text-xs text-blue-700 mt-1">
+              (Based on {rentData.averageRent.toFixed(2)} RM/sq ft × {Number(1000).toLocaleString()} sq ft)
+            </div>
           </div>
         </div>
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-          <div className="text-sm text-blue-800 mb-1">Estimated Monthly Rent</div>
-          <div className="text-2xl font-bold text-blue-900">
-            RM {calculateMonthlyRent(rentData.averageRent, 1000)}
-          </div>
-        </div>
-      </div>
+
 
       {/* Available Properties */}
       <div className="bg-white rounded-xl shadow-md p-6">
