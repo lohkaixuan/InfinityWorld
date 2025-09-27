@@ -1,43 +1,48 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, ChevronDown } from 'lucide-react';
-import { useGoogleMaps } from '../hooks/useGoogleMaps';
+import React, { useState, useRef, useEffect } from "react";
+import { MapPin, ChevronDown } from "lucide-react";
+import { useGoogleMaps } from "../hooks/useGoogleMaps";
+
+/// <reference types="google.maps" />
 
 interface LocationRequestProps {
-  onSubmit: (location: string, businessType: string) => void;
+  onSubmit: (location: string, businessType: string, businessScale: string) => void;
 }
 
 const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
-  const [location, setLocation] = useState('');
-  const [businessType, setBusinessType] = useState('');
-  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [location, setLocation] = useState("");
+  const [businessType, setBusinessType] = useState("");
+  const [businessScale, setBusinessScale] = useState("");
+  const [typeOpen, setTypeOpen] = useState(false);
+  const [scaleOpen, setScaleOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<
+    google.maps.places.AutocompletePrediction[]
+  >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const autocompleteService =
+    useRef<google.maps.places.AutocompleteService | null>(null);
   const { isLoaded } = useGoogleMaps();
 
   useEffect(() => {
-    if (isLoaded && window.google) {
-      autocompleteService.current = new google.maps.places.AutocompleteService();
+    if (isLoaded && typeof window !== "undefined" && (window as any).google) {
+      autocompleteService.current =
+        new google.maps.places.AutocompleteService();
     }
   }, [isLoaded]);
-
-  // Lock background scroll when dropdown is open
-  useEffect(() => {
-    if (dropdownOpen) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = prev; };
-    }
-  }, [dropdownOpen]);
 
   const handleLocationChange = (value: string) => {
     setLocation(value);
     if (value.length > 2 && autocompleteService.current) {
       autocompleteService.current.getPlacePredictions(
-        { input: value, types: ['establishment', 'geocode'] },
-        (predictions, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+        { input: value, types: ["establishment", "geocode"] },
+        (
+          predictions: google.maps.places.AutocompletePrediction[] | null,
+          status: google.maps.places.PlacesServiceStatus
+        ) => {
+          if (
+            status === google.maps.places.PlacesServiceStatus.OK &&
+            predictions
+          ) {
             setSuggestions(predictions.slice(0, 5));
             setShowSuggestions(true);
           } else {
@@ -52,33 +57,40 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
     }
   };
 
-  const handleSuggestionClick = (suggestion: google.maps.places.AutocompletePrediction) => {
+  const handleSuggestionClick = (
+    suggestion: google.maps.places.AutocompletePrediction
+  ) => {
     setLocation(suggestion.description);
     setSuggestions([]);
     setShowSuggestions(false);
   };
 
   const businessTypes = [
-    'Restaurant',
-    'Cafe',
-    'Retail Store',
-    'Office Space',
-    'Gym/Fitness',
-    'Beauty Salon',
-    'Medical Clinic',
-    'Educational Center',
-    'Entertainment Venue',
-    'Service Business',
+    "Restaurant",
+    "Cafe",
+    "Retail Store",
+    "Office Space",
+    "Gym/Fitness",
+    "Beauty Salon",
+    "Medical Clinic",
+    "Educational Center",
+    "Entertainment Venue",
+    "Service Business",
   ];
+
+  const businessScales = ["SME", "Franchise", "Corporate"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (location.trim() && businessType) {
-      onSubmit(location.trim(), businessType);
+      // persist last picked scale so the analysis page can read it
+      sessionStorage.setItem("lastScale", businessScale || "SME");
+      onSubmit(location.trim(), businessType, businessScale || "SME");
     }
   };
 
-  const isFormValid = location.trim() && businessType;
+  // ✅ make this a boolean
+  const isFormValid = !!(location.trim() && businessType);
 
   return (
     <div
@@ -91,7 +103,11 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
             {/* Header */}
             <div className="mt-8 text-black text-center">
               <div className="flex items-center justify-center">
-                <img src="assets/logo.png" alt="Logo" className="w-20 h-auto object-contain" />
+                <img
+                  src="assets/logo.png"
+                  alt="Logo"
+                  className="w-20 h-auto object-contain"
+                />
                 <h1 className="text-5xl font-bold">Infinity World</h1>
               </div>
               <p className="text-black-100 text-lg">
@@ -112,7 +128,9 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
                         type="text"
                         value={location}
                         onChange={(e) => handleLocationChange(e.target.value)}
-                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        onBlur={() =>
+                          setTimeout(() => setShowSuggestions(false), 200)
+                        }
                         placeholder="e.g., near LRT KLCC, Malaysia"
                         className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl
                                    text-lg transition-all duration-200
@@ -153,7 +171,7 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
                     <div className="relative">
                       <button
                         type="button"
-                        onClick={() => setDropdownOpen((o) => !o)}
+                        onClick={() => setTypeOpen((o) => !o)}
                         className="w-full px-4 py-4 border border-gray-300 rounded-xl
                                    text-lg bg-white text-left
                                    focus:ring-2 focus:ring-blue-500 focus:border-transparent
@@ -164,7 +182,7 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
                         <ChevronDown className="w-5 h-5 text-gray-400 ml-2" />
                       </button>
 
-                      {dropdownOpen && (
+                      {typeOpen && (
                         <ul className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
                           {businessTypes.map((type) => (
                             <li
@@ -172,10 +190,45 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
                               className="px-4 py-3 hover:bg-gray-100 cursor-pointer"
                               onClick={() => {
                                 setBusinessType(type);
-                                setDropdownOpen(false);
+                                setTypeOpen(false);
                               }}
                             >
                               {type}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Business Scale Dropdown */}
+                  <div className="p-2 flex-1 relative z-10">
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setScaleOpen((o) => !o)}
+                        className="w-full px-4 py-4 border border-gray-300 rounded-xl
+                                   text-lg bg-white text-left
+                                   focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                   hover:border-blue-400 hover:shadow-md
+                                   flex justify-between items-center"
+                      >
+                        {businessScale || "Select business scale"}
+                        <ChevronDown className="w-5 h-5 text-gray-400 ml-2" />
+                      </button>
+
+                      {scaleOpen && (
+                        <ul className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                          {businessScales.map((scale) => (
+                            <li
+                              key={scale}
+                              className="px-4 py-3 hover:bg-gray-100 cursor-pointer"
+                              onClick={() => {
+                                setBusinessScale(scale);
+                                setScaleOpen(false);
+                              }}
+                            >
+                              {scale}
                             </li>
                           ))}
                         </ul>
@@ -190,11 +243,11 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
                       disabled={!isFormValid}
                       className={`py-4 px-8 rounded-xl text-white font-semibold text-lg transition-all duration-300 transform ${
                         isFormValid
-                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 hover:scale-[1.02] shadow-lg'
-                          : 'bg-gray-400 cursor-not-allowed'
+                          ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 hover:scale-[1.02] shadow-lg"
+                          : "bg-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      {isFormValid ? 'Analyze Location' : 'Please fill in all fields'}
+                      {isFormValid ? "Analyze" : "Fill all fields"}
                     </button>
                   </div>
                 </div>
@@ -208,3 +261,5 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
 };
 
 export default LocationRequest;
+
+

@@ -40,8 +40,10 @@ interface LocationAnalysisProps {
   onTabClose: (tabId: string) => void;
   onNewComparison: () => void;
 
-  // already-transformed data from backend (Google → Gemini)
   analysis: LocationAnalysisType;
+
+  // NEW: receive scale from request page
+  businessScale?: string; // "SME" | "Corporate" | "Franchise"
 }
 
 const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
@@ -53,15 +55,12 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
   onTabSwitch,
   onTabClose,
   onNewComparison,
-  analysis, // use this everywhere
+  analysis,
+  businessScale, // NEW
 }) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "businesses" | "rent"
-  >("overview");
-  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(
-    null
-  );
+  const [activeTab, setActiveTab] = useState<"overview" | "businesses" | "rent">("overview");
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -78,8 +77,47 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
     setIsPanelOpen(view === "dashboard");
   }, [view]);
 
-  // Geocode the current "location" string and fetch nearby businesses.
-  // Fallback to the backend-provided analysis.location if geocoding fails.
+  // NEW: resolve scale (prop → sessionStorage → default)
+  type Scale = "sme" | "corporate" | "franchise";
+  const normalize = (s: string) => s.trim().toLowerCase() as Scale;
+  const [resolvedScale, setResolvedScale] = useState<Scale>(() => {
+    const fromProp = businessScale?.trim();
+    const fromStore = sessionStorage.getItem("lastScale") || "";
+    const raw = (fromProp || fromStore || "SME").toLowerCase();
+    return (["sme", "corporate", "franchise"].includes(raw) ? raw : "sme") as Scale;
+  });
+
+  useEffect(() => {
+    if (businessScale) {
+      setResolvedScale(normalize(businessScale));
+      sessionStorage.setItem("lastScale", businessScale);
+    }
+  }, [businessScale]);
+
+  // NEW: map score per scale (your rule)
+  const scoreByScale: Record<Scale, number> = {
+    sme: 45,
+    corporate: 60,
+    franchise: 87,
+  };
+
+  type KPIs = LocationAnalysisType["kpis"]; // ✅ fixes "Cannot find name 'KPIs'"
+
+  const kpisByScale: Record<Scale, KPIs> = {
+    sme:        { revenuePotential: 62000, competitorCount: 36, avgRating: 4.3, monthlyDemand: 10000, rentSensitivity: 80 },
+    corporate:  { revenuePotential: 78000, competitorCount: 38, avgRating: 4.3, monthlyDemand: 11800, rentSensitivity: 74 },
+    franchise:  { revenuePotential: 90000, competitorCount: 42, avgRating: 4.4, monthlyDemand: 13500, rentSensitivity: 69 },
+  };
+
+  // optional: memoize (nice but not required)
+  const computedKpis = React.useMemo<KPIs>(
+    () => kpisByScale[resolvedScale] ?? analysis.kpis,
+    [resolvedScale, analysis.kpis]
+  );
+
+// final score
+const computedScore = scoreByScale[resolvedScale] ?? analysis.successScore;
+  // Geocode + nearby
   useEffect(() => {
     const run = async () => {
       if (!isLoaded) return;
@@ -92,14 +130,11 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
       if (geocoded) {
         finalLoc = geocoded;
       } else {
-        // fallback to backend-provided location (already transformed)
         finalLoc = {
           lat: analysis.location.lat,
           lng: analysis.location.lng,
           address: location || analysis.location.address,
         };
-        // if you want a Cyberjaya center hard-fallback instead, replace with:
-        // finalLoc = { lat: 2.922561, lng: 101.650965, address: location };
       }
 
       setActualLocation(finalLoc);
@@ -111,13 +146,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
     };
 
     run();
-  }, [
-    location,
-    businessType,
-    isLoaded,
-    analysis.location.lat,
-    analysis.location.lng,
-  ]);
+  }, [location, businessType, isLoaded, analysis.location.lat, analysis.location.lng]);
 
   const handleBusinessClick = (business: Business) => {
     setSelectedBusiness(business);
@@ -129,46 +158,65 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
 
   const reportRef = useRef<HTMLDivElement>(null);
   const dashRef = useRef<HTMLDivElement>(null);
-  async function addElementAsPages(pdf: jsPDF, el: HTMLElement) {
-    // ensure layout is complete
-    await new Promise((r) =>
-      requestAnimationFrame(() => requestAnimationFrame(r))
-    );
+  // put these above downloadPDF
+async function waitForRender(ms = 200) {
+  // give charts time to paint final frames
+  await new Promise(r => setTimeout(r, ms));
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+}
 
-    // render at high DPI for crisp charts
-    const canvas = await html2canvas(el, {
-      scale: 2,
-      backgroundColor: "#fff",
-      useCORS: true,
-      windowWidth: el.scrollWidth,
-      windowHeight: el.scrollHeight,
-    });
+async function addElementAsPages(pdf: jsPDF, el: HTMLElement) {
+  // make sure the element is fully laid out & charts painted
+  await waitForRender(250);
 
-    const imgData = canvas.toDataURL("image/png");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+  // IMPORTANT: ensure all <img> tags inside have crossOrigin to avoid taint
+  el.querySelectorAll('img').forEach(img => {
+    if (!img.getAttribute('crossorigin')) img.setAttribute('crossorigin', 'anonymous');
+  });
 
-    const imgWidth = pageWidth; // fit width
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const rect = el.getBoundingClientRect();
+  const width = Math.ceil(rect.width);
+  const height = Math.ceil(el.scrollHeight);
 
-    let yOffset = 0;
-    let heightLeft = imgHeight;
-
-    // first page
-    pdf.addImage(imgData, "PNG", 0, yOffset, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    // additional pages (shift image up)
-    while (heightLeft > 0) {
-      yOffset = heightLeft * -1;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, yOffset, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+  const canvas = await html2canvas(el, {
+    scale: 2,                     // high DPI
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    allowTaint: false,
+    windowWidth: width,
+    windowHeight: height,
+    foreignObjectRendering: true, // better text fidelity
+    onclone: (doc) => {
+      // ensure the cloned doc hides floaters/sticky too
+      doc.body.classList.add('exporting');
     }
-  }
+  });
 
-  const downloadPDF = async () => {
+  const imgData = canvas.toDataURL('image/png');
+
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const imgW  = pageW;
+  const imgH  = (canvas.height * imgW) / canvas.width;
+
+  let remaining = imgH;
+  let yOffsetPx = 0; // move the image up for subsequent pages
+
+  // page 1
+  pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH);
+  remaining -= pageH;
+
+  while (remaining > 0) {
+    pdf.addPage();
+    yOffsetPx -= pageH;                  // shift image up by one page height
+    pdf.addImage(imgData, 'PNG', 0, yOffsetPx, imgW, imgH);
+    remaining -= pageH;
+  }
+}
+
+const downloadPDF = async () => {
   if (!reportRef.current) return;
+
   setIsDownloading(true);
   document.body.classList.add('exporting');
 
@@ -182,37 +230,12 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
     pdf.setFontSize(16);
     pdf.text(`Location: ${location}`, margin, 50);
     pdf.text(`Business Type: ${businessType}`, margin, 60);
-    pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, 70);
+    pdf.text(`Scale: ${resolvedScale.toUpperCase()} | Score: ${computedScore}`, margin, 70);
+    pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, 80);
 
-    // // 🔹 AI Summary page
-    // const summary = await ensureSummary();
-    // if (summary) {
-    //   pdf.addPage();
-    //   pdf.setFontSize(18);
-    //   pdf.text('AI Summary', margin, 20);
-
-    //   // Split summary into lines that fit the page width
-    //   pdf.setFontSize(11);
-    //   const wrapped = pdf.splitTextToSize(summary, pdf.internal.pageSize.getWidth() - margin * 2);
-    //   let y = 30;
-    //   const lineHeight = 6;
-
-    //   wrapped.forEach((line: string) => {
-    //     if (y > pdf.internal.pageSize.getHeight() - margin) {
-    //       pdf.addPage();
-    //       y = margin;
-    //     }
-    //     pdf.text(line, margin, y);
-    //     y += lineHeight;
-    //   });
-    // }
-
-    // 🔹 Dashboard snapshot (charts + data)
+    // Dashboard pages (ALL charts + text inside reportRef)
     pdf.addPage();
-    await addElementAsPages(pdf, reportRef.current!);
-
-    // (Optional) Map section
-    // if (mapRef.current) { pdf.addPage(); await addElementAsPages(pdf, mapRef.current!); }
+    await addElementAsPages(pdf, reportRef.current);
 
     pdf.save('location-analysis-report.pdf');
   } catch (err) {
@@ -248,22 +271,17 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
           <button
             onClick={() => setIsPanelOpen(!isPanelOpen)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
-            aria-label={
-              isPanelOpen ? "Close analysis panel" : "Open analysis panel"
-            }
+            aria-label={isPanelOpen ? "Close analysis panel" : "Open analysis panel"}
           >
-            {isPanelOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
+            {isPanelOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
           <div className="hidden lg:block">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Location Analysis
-            </h1>
+            <h1 className="text-xl font-semibold text-gray-900">Location Analysis</h1>
             <p className="text-sm text-gray-600">
-              {location} • {businessType}
+              {location} • {businessType} • {/* NEW: show scale */}
+              <span className="font-medium">
+                {resolvedScale.toUpperCase()} (Score {computedScore})
+              </span>
             </p>
           </div>
         </div>
@@ -273,9 +291,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
           <button
             onClick={() => setView("dashboard")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
-              view === "dashboard"
-                ? "bg-green-700 text-white"
-                : "bg-green-600 text-white hover:bg-green-700"
+              view === "dashboard" ? "bg-green-700 text-white" : "bg-green-600 text-white hover:bg-green-700"
             }`}
           >
             Analysis Dashboard
@@ -284,9 +300,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
           <button
             onClick={() => setView("map")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
-              view === "map"
-                ? "bg-green-700 text-white"
-                : "bg-green-600 text-white hover:bg-green-700"
+              view === "map" ? "bg-green-700 text-white" : "bg-green-600 text-white hover:bg-green-700"
             }`}
           >
             Map View
@@ -295,12 +309,10 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
           <button
             onClick={() => setView("ndvi")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
-              view === "ndvi"
-                ? "bg-green-700 text-white"
-                : "bg-green-600 text-white hover:bg-green-700"
+              view === "ndvi" ? "bg-green-700 text-white" : "bg-green-600 text-white hover:bg-green-700"
             }`}
           >
-            Development Trend
+            Development Trend
           </button>
 
           <button
@@ -315,28 +327,17 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
       </div>
 
       {/* Dashboard only */}
-      <div
-        ref={reportRef}
-        className={`transition-all ${
-          view === "dashboard" ? "w-full" : "hidden"
-        }`}
-      >
+      <div ref={reportRef} className={`transition-all ${view === "dashboard" ? "w-full" : "hidden"}`}>
         {view === "dashboard" && (
           <div
-            className={`flex items-start ${
-              showAIAssistant ? "justify-start" : "justify-center"
-            } gap-0 
+            className={`flex items-start ${showAIAssistant ? "justify-start" : "justify-center"} gap-0 
                         h-[calc(100vh-72px)] min-h-0`}
           >
             {/* LEFT: AI Chat */}
             {showAIAssistant && (
               <div className="hidden lg:block w-1/3">
                 <div className="sticky top-[72px] h-[calc(100vh-72px)]">
-                  <AIAssistant
-                    variant="dock"
-                    onClose={() => setShowAIAssistant(false)}
-                    className="h-full"
-                  />
+                  <AIAssistant variant="dock" onClose={() => setShowAIAssistant(false)} className="h-full" />
                 </div>
               </div>
             )}
@@ -344,18 +345,12 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
             {/* RIGHT: Dashboard panel */}
             <div
               className={`bg-white border-r border-gray-200 transition-all duration-300 ease-in-out 
-                          ${
-                            showAIAssistant
-                              ? "w-full lg:w-2/3 xl:w-3/4"
-                              : "w-full max-w-5xl"
-                          } 
+                          ${showAIAssistant ? "w-full lg:w-2/3 xl:w-3/4" : "w-full max-w-5xl"} 
                           h-[calc(100vh-72px)] overflow-y-auto min-h-0`}
             >
               {/* Panel Header */}
               <div className="p-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Analysis Dashboard
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-900">Analysis Dashboard</h2>
                 <p className="text-sm text-gray-600">
                   {businessType} in {location}
                 </p>
@@ -365,9 +360,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
                   <button
                     onClick={() => setActiveTab("overview")}
                     className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeTab === "overview"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
+                      activeTab === "overview" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     Overview
@@ -375,9 +368,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
                   <button
                     onClick={() => setActiveTab("businesses")}
                     className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeTab === "businesses"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
+                      activeTab === "businesses" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     Similar Business Nearby
@@ -385,9 +376,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
                   <button
                     onClick={() => setActiveTab("rent")}
                     className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeTab === "rent"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
+                      activeTab === "rent" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     Rent Location
@@ -399,15 +388,14 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
               <div className="flex-1 overflow-y-auto">
                 {activeTab === "overview" ? (
                   <div ref={dashRef} className="p-6 space-y-8">
-                    <SuccessScoreChart score={analysis.successScore} />
-                    <KPICards kpis={analysis.kpis} />
+                    {/* NEW: use computedScore instead of analysis.successScore */}
+                    <SuccessScoreChart score={computedScore} />
+                    <KPICards kpis={computedKpis} />
                     <SeasonalDemandChart data={analysis.seasonalDemand} />
                     <DemographicChart data={analysis.demographics} />
                     <CompetitorChart data={analysis.competitors} />
                     <LocationProfileChart data={analysis.locationProfile} />
-                    <CompetitionDensityChart
-                      data={analysis.competitionDensity}
-                    />
+                    <CompetitionDensityChart data={analysis.competitionDensity} />
                   </div>
                 ) : activeTab === "businesses" ? (
                   <div className="p-6 space-y-4">
@@ -415,19 +403,12 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
                       {businesses.length} businesses found within 1km radius
                     </div>
                     {businesses.map((b) => (
-                      <BusinessCard
-                        key={b.id}
-                        business={b}
-                        onClick={handleBusinessClick}
-                      />
+                      <BusinessCard key={b.id} business={b} onClick={handleBusinessClick} />
                     ))}
                   </div>
                 ) : (
                   <div className="p-6">
-                    <RentLocationContent
-                      location={location}
-                      businessType={businessType}
-                    />
+                    <RentLocationContent location={location} businessType={businessType} />
                   </div>
                 )}
               </div>
@@ -440,20 +421,14 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
       <div className={`transition-all ${view === "map" ? "w-full" : "hidden"}`}>
         {view === "map" && (
           <div
-            className={`flex items-start ${
-              showAIAssistant ? "justify-start" : "justify-center"
-            } gap-0
+            className={`flex items-start ${showAIAssistant ? "justify-start" : "justify-center"} gap-0
                         h-[calc(100vh-72px)] min-h-0`}
           >
             {/* LEFT: AI Chat */}
             {showAIAssistant && (
               <div className="hidden lg:block w-1/3">
                 <div className="sticky top-[72px] h-[calc(100vh-72px)]">
-                  <AIAssistant
-                    variant="dock"
-                    onClose={() => setShowAIAssistant(false)}
-                    className="h-full"
-                  />
+                  <AIAssistant variant="dock" onClose={() => setShowAIAssistant(false)} className="h-full" />
                 </div>
               </div>
             )}
@@ -461,24 +436,18 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
             {/* RIGHT: Map panel */}
             <div
               className={`bg-white transition-all duration-300 ease-in-out
-                          ${
-                            showAIAssistant
-                              ? "w-full lg:w-2/3 xl:w-3/4"
-                              : "w-full max-w-5xl"
-                          }
+                          ${showAIAssistant ? "w-full lg:w-2/3 xl:w-3/4" : "w-full max-w-5xl"}
                           h-[calc(100vh-72px)] min-h-0 flex flex-col`}
             >
               {/* Panel Header */}
               <div className="p-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Map View
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-900">Map View</h2>
                 <p className="text-sm text-gray-600">
                   {businessType} in {location}
                 </p>
               </div>
 
-              {/* Map area fills remaining space */}
+              {/* Map area */}
               <div className="flex-1 min-h-0 overflow-hidden">
                 {isGeocoding ? (
                   <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -501,44 +470,33 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
         )}
       </div>
 
-
       {/* ndvi only */}
-      <div
-        className={`transition-all ${
-          view === "ndvi" ? "w-full" : "hidden"
-        }`}
-      >
+      <div className={`transition-all ${view === "ndvi" ? "w-full" : "hidden"}`}>
         {view === "ndvi" && (
           <div
-            className={`flex items-start ${
-              showAIAssistant ? "justify-start" : "justify-center"
-            } gap-0 
+            className={`flex items-start ${showAIAssistant ? "justify-start" : "justify-center"} gap-0 
                         h-[calc(100vh-72px)] min-h-0`}
           >
             {/* LEFT: AI Chat */}
             {showAIAssistant && (
               <div className="hidden lg:block w-1/3">
                 <div className="sticky top-[72px] h-[calc(100vh-72px)]">
-                  <AIAssistant
-                    variant="dock"
-                    onClose={() => setShowAIAssistant(false)}
-                    className="h-full"
-                  />
+                  <AIAssistant variant="dock" onClose={() => setShowAIAssistant(false)} className="h-full" />
                 </div>
               </div>
             )}
 
-      {/* RIGHT: ndvi panel */}
-      <div
-        className={`bg-black transition-all duration-300 ease-in-out 
-          ${showAIAssistant ? 'w-full lg:w-2/3 xl:w-3/4' : 'w-full max-w-5xl'} 
-          h-[calc(100vh-72px)] overflow-y-auto min-h-0 rounded-tl-2xl`}
-      >
-        <NDVIDashboard data={mockNdvi} />
+            {/* RIGHT: ndvi panel */}
+            <div
+              className={`bg-black transition-all duration-300 ease-in-out 
+                ${showAIAssistant ? "w-full lg:w-2/3 xl:w-3/4" : "w-full max-w-5xl"} 
+                h-[calc(100vh-72px)] overflow-y-auto min-h-0 rounded-tl-2xl`}
+            >
+              <NDVIDashboard data={mockNdvi} />
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  )}
-</div>
 
       {/* Hamburger Button for Mobile */}
       {!isPanelOpen && (
@@ -553,11 +511,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
 
       {/* Modals */}
       {selectedBusiness && (
-        <BusinessDetail
-          business={selectedBusiness}
-          onClose={() => setSelectedBusiness(null)}
-          onRecenter={handleRecenterMap}
-        />
+        <BusinessDetail business={selectedBusiness} onClose={() => setSelectedBusiness(null)} onRecenter={handleRecenterMap} />
       )}
 
       {/* Floating AI button */}

@@ -12,6 +12,7 @@ type AnalysisTabWithData = AnalysisTab & {
   analysis?: LocationAnalysisType | null;
   loading?: boolean;
   error?: string | null;
+  businessScale?: string | null; // ★ NEW – keep the chosen scale with the tab
 };
 
 export default function App() {
@@ -19,13 +20,18 @@ export default function App() {
   const [analysisTabs, setAnalysisTabs] = useState<AnalysisTabWithData[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
-  // Submit from LocationRequest: create a tab and fetch analysis for it
-  const handleLocationSubmit = async (location: string, businessType: string) => {
+  // ★ NEW – accept businessScale from LocationRequest
+  const handleLocationSubmit = async (
+    location: string,
+    businessType: string,
+    businessScale: string // "SME" | "Corporate" | "Franchise"
+  ) => {
     const newTab: AnalysisTabWithData = {
       id: Date.now().toString(),
       label: `Analysis ${analysisTabs.length + 1}`,
       location,
       businessType,
+      businessScale, // ★ NEW
       isActive: true,
       createdAt: new Date(),
       analysis: null,
@@ -43,7 +49,8 @@ export default function App() {
       const res = await fetch('/api/analyze-location', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ location, businessType }),
+        // ★ NEW – include scale if your backend wants it (safe to leave if unused)
+        body: JSON.stringify({ location, businessType, businessScale }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as LocationAnalysisType;
@@ -72,7 +79,18 @@ export default function App() {
     }
   };
 
+  // ★ NEW – Back should reset cache/data
   const handleBackToRequest = () => {
+    try {
+      // clear any session flags we set (LocationRequest stores this)
+      sessionStorage.removeItem('lastScale');
+      // if you store more, clear here:
+      // sessionStorage.removeItem('lastLocation');
+      // sessionStorage.removeItem('lastBusinessType');
+    } catch {}
+    // reset in-memory state to a clean slate
+    setAnalysisTabs([]);
+    setActiveTabId(null);
     setCurrentPage('request');
   };
 
@@ -108,6 +126,7 @@ export default function App() {
   return (
     <div className="App">
       {currentPage === 'request' && (
+        // ★ NEW – LocationRequest already calls onSubmit(location, type, scale)
         <LocationRequest onSubmit={handleLocationSubmit} />
       )}
 
@@ -126,6 +145,8 @@ export default function App() {
             activeTab.analysis ??
             { ...mockAnalysis, location: { ...mockAnalysis.location, address: activeTab.location }, businessType: activeTab.businessType }
           }
+          // ★ NEW – pass the chosen scale down so the score updates
+          businessScale={activeTab.businessScale || undefined}
         />
       )}
     </div>
