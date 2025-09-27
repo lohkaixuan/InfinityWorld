@@ -169,8 +169,8 @@ const NDVIDashboard: React.FC<Props> = ({ data }) => {
         }
       >
         <BeforeAfterFlip
-          beforeSrc="assets/before.png"
-          afterSrc="assets/after.png"
+          beforeSrc="/before.png"
+          afterSrc="/after.png"
           intervalMs={1800}
           playing={!fsOpen}  // pause autoplay while fullscreen is open
         />
