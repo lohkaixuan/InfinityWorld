@@ -81,13 +81,13 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
   const businessScales = ["SME", "Franchise", "Corporate"];
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (location.trim() && businessType) {
-      // persist last picked scale so the analysis page can read it
-      sessionStorage.setItem("lastScale", businessScale || "SME");
-      onSubmit(location.trim(), businessType, businessScale || "SME");
-    }
-  };
+  e.preventDefault();
+  if (location.trim() && businessType) {
+    // persist last picked scale so the analysis page can read it
+    sessionStorage.setItem("lastScale", businessScale || "SME");
+    onSubmit(location.trim(), businessType, businessScale || "SME");
+  }
+};
 
   // ✅ make this a boolean
   const isFormValid = !!(location.trim() && businessType);

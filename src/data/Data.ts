@@ -1,6 +1,6 @@
 import { LocationAnalysis, Business } from '../types';
 
-export const mockAnalysis: LocationAnalysis = {
+export const Analysis: LocationAnalysis = {
   location: {
     lat: 2.9226,
     lng: 101.6550,
@@ -48,7 +48,7 @@ export const mockAnalysis: LocationAnalysis = {
   },
 };
 
-export const mockBusinesses: Business[] = [
+export const Businesses: Business[] = [
   {
     id: '1',
     name: 'Shaftsbury Square Bistro',

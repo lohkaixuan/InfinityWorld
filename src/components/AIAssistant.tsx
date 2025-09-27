@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, User } from 'lucide-react';
 import { ChatMessage } from '../types';
-import { chatSuggestions } from '../data/mockData';
+import { chatSuggestions } from '../data/Data';
 
 interface AIAssistantProps {
   onClose: () => void;

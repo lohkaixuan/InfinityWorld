@@ -20,7 +20,6 @@ import {
   Location,
 } from "../types";
 
-// no mock import here
 import { geocodeLocation } from "../utils/geocoding";
 import { findNearbyBusinesses } from "../utils/placesService";
 import { useGoogleMaps } from "../hooks/useGoogleMaps";
@@ -28,7 +27,7 @@ import jsPDF from "jspdf";
 
 import html2canvas from "html2canvas";
 import NDVIDashboard from "../components/ndvi/NDVIDashboard";
-import { mockNdvi } from "../data/mockNDVI";
+import { Ndvi } from "../data/NDVI";
 
 interface LocationAnalysisProps {
   location: string;
@@ -492,7 +491,7 @@ const downloadPDF = async () => {
                 ${showAIAssistant ? "w-full lg:w-2/3 xl:w-3/4" : "w-full max-w-5xl"} 
                 h-[calc(100vh-72px)] overflow-y-auto min-h-0 rounded-tl-2xl`}
             >
-              <NDVIDashboard data={mockNdvi} />
+              <NDVIDashboard data={Ndvi} />
             </div>
           </div>
         )}

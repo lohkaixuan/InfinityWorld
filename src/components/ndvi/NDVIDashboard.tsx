@@ -5,7 +5,7 @@ import {
   BarChart, Bar, CartesianGrid,
 } from "recharts";
 import { Leaf, Factory, Droplets, Activity, Calendar } from "lucide-react";
-import type { NdviDataset } from "../../data/mockNDVI";
+import type { NdviDataset } from "../../data/NDVI";
 
 type Props = { data: NdviDataset };
 

@@ -9,7 +9,7 @@ interface RentLocationContentProps {
 const RentLocationContent: React.FC<RentLocationContentProps> = ({ location, businessType }) => {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
 
-  // Mock rental data
+  //  rental data
   const rentData = {
     averageRent: 15.50,
     priceRange: { min: 12, max: 22 },

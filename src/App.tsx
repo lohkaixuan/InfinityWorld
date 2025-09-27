@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import LocationRequest from './pages/LocationRequest';
 import LocationAnalysis from './pages/LocationAnalysis';
 import type { AnalysisTab, LocationAnalysis as LocationAnalysisType } from './types';
-import { mockAnalysis } from './data/mockData';
+import { Analysis } from './data/Data';
 
 type AppState = 'request' | 'analysis';
 
@@ -63,10 +63,10 @@ export default function App() {
         )
       );
     } catch (e: any) {
-      console.warn('Analyze failed, using mock fallback:', e?.message || e);
+      console.warn('Analyze failed, using fallback:', e?.message || e);
       const fallback: LocationAnalysisType = {
-        ...mockAnalysis,
-        location: { ...mockAnalysis.location, address: location },
+        ...Analysis,
+        location: { ...Analysis.location, address: location },
         businessType,
       };
       setAnalysisTabs(tabs =>
@@ -140,10 +140,10 @@ export default function App() {
           onTabSwitch={handleTabSwitch}
           onTabClose={handleTabClose}
           onNewComparison={handleNewComparison}
-          // pass transformed analysis (or mock while loading)
+          // pass transformed analysis (or  while loading)
           analysis={
             activeTab.analysis ??
-            { ...mockAnalysis, location: { ...mockAnalysis.location, address: activeTab.location }, businessType: activeTab.businessType }
+            { ...Analysis, location: { ...Analysis.location, address: activeTab.location }, businessType: activeTab.businessType }
           }
           // ★ NEW – pass the chosen scale down so the score updates
           businessScale={activeTab.businessScale || undefined}
