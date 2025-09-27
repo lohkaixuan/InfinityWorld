@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef,useMemo } from "react";
 import { Menu, X, MessageCircle, Download, ArrowLeft } from "lucide-react";
 import TabNavigation from "../components/TabNavigation";
 import GoogleMap from "../components/GoogleMap";
@@ -93,31 +93,52 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
     }
   }, [businessScale]);
 
-  // NEW: map score per scale (your rule)
-  const scoreByScale: Record<Scale, number> = {
-    sme: 45,
-    corporate: 60,
-    franchise: 87,
-  };
+ // --- after resolvedScale is set ---
 
-  type KPIs = LocationAnalysisType["kpis"]; // ✅ fixes "Cannot find name 'KPIs'"
+    // map score per scale
+    const scoreByScale: Record<Scale, number> = {
+      sme: 45,
+      corporate: 60,
+      franchise: 87,
+    };
 
-  const kpisByScale: Record<Scale, KPIs> = {
-    sme:        { revenuePotential: 62000, competitorCount: 36, avgRating: 4.3, monthlyDemand: 10000, rentSensitivity: 80 },
-    corporate:  { revenuePotential: 78000, competitorCount: 38, avgRating: 4.3, monthlyDemand: 11800, rentSensitivity: 74 },
-    franchise:  { revenuePotential: 90000, competitorCount: 42, avgRating: 4.4, monthlyDemand: 13500, rentSensitivity: 69 },
-  };
+    // ✅ compute score first (memoized)
+    const computedScore = useMemo(
+      () => scoreByScale[resolvedScale] ?? analysis.successScore,
+      [resolvedScale, analysis.successScore]
+    );
 
-  // optional: memoize (nice but not required)
-  const computedKpis = React.useMemo<KPIs>(
-    () => kpisByScale[resolvedScale] ?? analysis.kpis,
-    [resolvedScale, analysis.kpis]
-  );
+    // KPIs typing + per-scale values
+    type KPIs = LocationAnalysisType["kpis"];
 
-// final score
-const computedScore = scoreByScale[resolvedScale] ?? analysis.successScore;
-  // Geocode + nearby
+    const kpisByScale: Record<Scale, KPIs> = {
+      sme:       { revenuePotential: 62000, competitorCount: 36, avgRating: 4.3, monthlyDemand: 10000, rentSensitivity: 80 },
+      corporate: { revenuePotential: 78000, competitorCount: 38, avgRating: 4.3, monthlyDemand: 11800, rentSensitivity: 74 },
+      franchise: { revenuePotential: 90000, competitorCount: 42, avgRating: 4.4, monthlyDemand: 13500, rentSensitivity: 69 },
+    };
+
+    // ✅ memoize KPIs
+    const computedKpis = useMemo<KPIs>(
+      () => kpisByScale[resolvedScale] ?? analysis.kpis,
+      [resolvedScale, analysis.kpis]
+    );
+
+    // ✅ now it’s safe to use both in the effect
+    useEffect(() => {
+      try {
+        sessionStorage.setItem("lastLocation", location);
+        sessionStorage.setItem("lastBusinessType", businessType);
+        sessionStorage.setItem("lastScale", resolvedScale.toUpperCase());
+        sessionStorage.setItem("lastScore", String(computedScore));
+        sessionStorage.setItem("lastKpis", JSON.stringify(computedKpis));
+      } catch (e) {
+        console.warn("Failed to persist assistant context:", e);
+      }
+    }, [location, businessType, resolvedScale, computedScore, computedKpis]);
+
+
   useEffect(() => {
+    
     const run = async () => {
       if (!isLoaded) return;
 

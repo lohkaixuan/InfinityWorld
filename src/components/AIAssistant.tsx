@@ -3,11 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, User } from 'lucide-react';
 import { ChatMessage } from '../types';
 import { chatSuggestions } from '../data/Data';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface AIAssistantProps {
   onClose: () => void;
-  variant?: 'modal' | 'dock';   // NEW
-  className?: string;           // optional external sizing
+  variant?: 'modal' | 'dock';
+  className?: string;
 }
 
 const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', className }) => {
@@ -23,36 +24,55 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 🔐 Hardcoded Gemini setup
+  const genAI = new GoogleGenerativeAI('AIzaSyDrcso9y-Mtqr33Bkc7CiE10cVg2ykJSG0');
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => { scrollToBottom(); }, [messages]);
 
-  const fetchBedrockResponse = async (userMessage: string): Promise<string> => {
+  // ✅ Fixed: pass a single string to generateContent
+  const fetchGeminiResponse = async (payload: any): Promise<string> => {
     try {
-      const apiUrl = "https://qze1ayrtf4.execute-api.ap-southeast-1.amazonaws.com/prod/api/bedrock-chat";
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage }),
-      });
-      if (!res.ok) throw new Error('Failed to fetch response');
-      const data = await res.json();
-      return data.response || 'Sorry, I could not get a response from the AI.';
-    } catch {
-      return 'Error contacting AI service.';
+      const userJson = JSON.stringify(payload, null, 2);
+      const systemPrompt =
+        "You are an assistant for a location analysis dashboard. Be concise and actionable. " +
+        "Use the JSON context (location, businessType, scale, score, kpis) to answer the user's prompt directly.";
+
+      const prompt = `${systemPrompt}
+
+<INPUT_JSON>
+${userJson}
+</INPUT_JSON>`;
+
+      console.log('[Gemini] sending:', prompt);
+
+      const result = await model.generateContent(prompt);
+
+      const text = result.response?.text?.() ?? '';
+      console.log('[Gemini] response:', text);
+      return text.trim() || 'Empty response from Gemini.';
+    } catch (err: any) {
+      console.error('[Gemini] error:', err);
+      return `Gemini error: ${err?.message || err}`;
     }
   };
 
   const handleSendMessage = async (text: string = inputValue) => {
     if (!text.trim()) return;
 
-    // Wrap context into JSON for backend
-    const contextPayload = {
-      location: sessionStorage.getItem("lastLocation") || "Unknown",
-      businessType: sessionStorage.getItem("lastBusinessType") || "Unknown",
-      scale: sessionStorage.getItem("lastScale") || "SME",
-      score: sessionStorage.getItem("lastScore") || null,
-      kpis: JSON.parse(sessionStorage.getItem("lastKpis") || "{}"),
-      userPrompt: text.trim(),
+    const context = {
+      location:       sessionStorage.getItem('lastLocation')     || 'Unknown',
+      businessType:   sessionStorage.getItem('lastBusinessType') || 'Unknown',
+      scale:          sessionStorage.getItem('lastScale')        || 'SME',
+      score:          Number(sessionStorage.getItem('lastScore')) || null,
+      kpis:           (() => { try { return JSON.parse(sessionStorage.getItem('lastKpis') || '{}'); } catch { return {}; } })(),
+    };
+
+    const payload = {
+      prompt: text.trim(),
+      context,
+      meta: { source: 'location-analysis-ui', ts: Date.now() },
     };
 
     const userMessage: ChatMessage = {
@@ -65,8 +85,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
     setInputValue('');
     setIsTyping(true);
 
-    // 🚀 Send JSON instead of plain text
-    const aiText = await fetchBedrockResponse(JSON.stringify(contextPayload, null, 2));
+    const aiText = await fetchGeminiResponse(payload);
 
     const aiResponse: ChatMessage = {
       id: (Date.now() + 1).toString(),
@@ -78,7 +97,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
     setIsTyping(false);
   };
 
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -86,7 +104,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
     }
   };
 
-  // === Docked layout (no overlay) ===
   if (variant === 'dock') {
     return (
       <div className={`h-full flex flex-col ${className || ''}`}>
@@ -107,10 +124,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-white">
           {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-2 ${message.isUser ? 'flex-row-reverse' : 'flex-row'}`}
-            >
+            <div key={message.id} className={`flex gap-2 ${message.isUser ? 'flex-row-reverse' : 'flex-row'}`}>
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
                   message.isUser ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
@@ -119,7 +133,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
                 {message.isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
               </div>
               <div
-                className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm break-words whitespace-pre-wrap ${
                   message.isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'
                 }`}
               >
@@ -138,9 +152,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
               </div>
               <div className="bg-gray-100 px-3 py-2 rounded-2xl">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" />
+                  <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0.1s]" />
+                  <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0.2s]" />
                 </div>
               </div>
             </div>
@@ -191,13 +205,11 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
     );
   }
 
-  // === Original modal layout ===
+  // (Optional) modal variant can reuse the same inner UI
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl h-[600px] flex flex-col">
-        {/* ... keep your original modal content here ... */}
-        {/* (You can keep your existing modal JSX for 'variant === modal') */}
-        {/* For brevity, omitted since it's unchanged from your code */}
+        {/* reuse dock UI if needed */}
       </div>
     </div>
   );
