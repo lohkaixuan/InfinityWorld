@@ -537,8 +537,10 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
                           } 
                           h-[calc(100vh-72px)] overflow-y-auto min-h-0`}
             ></div>
-
           </div>
+        )}
+      </div>
+
       {/* Hamburger Button for Mobile */}
       {!isPanelOpen && (
         <button
