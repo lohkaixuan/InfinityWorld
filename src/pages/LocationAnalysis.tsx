@@ -446,7 +446,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
           >
             {/* LEFT: AI Chat */}
             {showAIAssistant && (
-              <div className="hidden lg:block w">
+              <div className="hidden lg:block w-2/3">
                 <div className="sticky top-[72px] h-[calc(100vh-72px)]">
                   <AIAssistant
                     variant="dock"
@@ -537,8 +537,10 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
                           } 
                           h-[calc(100vh-72px)] overflow-y-auto min-h-0`}
             ></div>
-
           </div>
+        )}
+      </div>
+
       {/* Hamburger Button for Mobile */}
       {!isPanelOpen && (
         <button

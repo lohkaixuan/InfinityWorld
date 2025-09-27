@@ -26,8 +26,8 @@
       ],
       "providerPlugin": "awscloudformation",
       "service": "API Gateway",
-      "lastPushDirHash": "keDyx7/pNMQgJL94UxtyuS9ohEc=",
-      "lastPushTimeStamp": "2025-09-27T09:54:09.990Z"
+      "lastPushDirHash": "OZrWHuHkmUQGeiczwPn2z21cnLY=",
+      "lastPushTimeStamp": "2025-09-27T10:23:57.999Z"
     }
   },
   "function": {
@@ -47,7 +47,7 @@
         "s3TemplateURL": "https://s3.amazonaws.com/amplify-infinityworld-dev-6c404-deployment/amplify-cfn-templates/function/bedrockChat-cloudformation-template.json",
         "logicalId": "functionbedrockChat"
       },
-      "lastPushTimeStamp": "2025-09-27T09:54:09.990Z",
+      "lastPushTimeStamp": "2025-09-27T10:23:57.828Z",
       "output": {
         "LambdaExecutionRoleArn": "arn:aws:iam::979237821101:role/locationanalysisLambdaRole-dev",
         "Region": "ap-southeast-1",

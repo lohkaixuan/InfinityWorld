@@ -28,7 +28,7 @@
           "Fn::Join": [
             "",
             [
-              "bizlocateapi",
+              "locationanalysisapi",
               "-",
               {
                 "Ref": "env"
@@ -40,10 +40,10 @@
           "swagger": "2.0",
           "info": {
             "version": "2018-05-24T17:52:00Z",
-            "title": "bizlocateapi"
+            "title": "locationanalysisapi"
           },
           "host": "apigateway.amazonaws.com",
-          "basePath": "/prod",
+          "basePath": "/",
           "schemes": [
             "https"
           ],
@@ -190,7 +190,7 @@
     },
     "ApiName": {
       "Description": "API Friendly name",
-      "Value": "bizlocateapi"
+      "Value": "locationanalysisapi"
     },
     "ApiId": {
       "Description": "API ID (prefix of API URL)",
