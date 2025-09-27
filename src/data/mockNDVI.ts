@@ -35,7 +35,7 @@ export interface NdviDataset {
 }
 
 export const mockNdvi: NdviDataset = {
-  title: "NDVI Vegetation Analysis",
+  title: "Development Vegetation Analysis",
   subtitle: "Satellite-powered vegetation change detection for sample AOI",
   period: "2020-01-30 → 2023-01-09",
   kpis: [
