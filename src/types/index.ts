@@ -42,6 +42,7 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export type BusinessScale = "SME" | "Corporate" | "Franchise";
 export interface AnalysisTab {
   id: string;
   label: string;
@@ -49,4 +50,7 @@ export interface AnalysisTab {
   businessType: string;
   isActive: boolean;
   createdAt: Date;
+  
+  businessScale: BusinessScale;     // which scale this tab uses
+  analysis: LocationAnalysis;    
 }

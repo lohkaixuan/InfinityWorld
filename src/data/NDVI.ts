@@ -1,4 +1,4 @@
-// src/data/mockNdvi.ts
+// src/data/Ndvi.ts
 export type NdviKpi = {
   label: string;
   value: number;      // percentage (e.g., 24.1 means +24.1%)
@@ -34,8 +34,8 @@ export interface NdviDataset {
   vegetationTrend: NdviTrendPoint[];
 }
 
-export const mockNdvi: NdviDataset = {
-  title: "NDVI Vegetation Analysis",
+export const Ndvi: NdviDataset = {
+  title: "Development Vegetation Analysis",
   subtitle: "Satellite-powered vegetation change detection for sample AOI",
   period: "2020-01-30 → 2023-01-09",
   kpis: [
