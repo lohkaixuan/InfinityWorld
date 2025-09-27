@@ -1,4 +1,20 @@
 {
+  "api": {
+    "locationanalysisapi": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "Name",
+            "Arn"
+          ],
+          "category": "function",
+          "resourceName": "bedrockChat"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "API Gateway"
+    }
+  },
   "function": {
     "bedrockChat": {
       "build": true,
@@ -6,18 +22,20 @@
       "service": "Lambda"
     }
   },
-  "api": {
-    "locationanalysisapi": {
-      "service": "API Gateway",
-      "providerPlugin": "awscloudformation",
-      "dependsOn": [
+  "parameters": {
+    "AMPLIFY_function_bedrockChat_deploymentBucketName": {
+      "usedBy": [
         {
           "category": "function",
-          "resourceName": "bedrockChat",
-          "attributes": [
-            "Name",
-            "Arn"
-          ]
+          "resourceName": "bedrockChat"
+        }
+      ]
+    },
+    "AMPLIFY_function_bedrockChat_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "bedrockChat"
         }
       ]
     }

@@ -528,17 +528,17 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
               </div>
             )}
 
-        {/* RIGHT: ndvi panel */}
-        <div
-          className={`bg-black transition-all duration-300 ease-in-out 
-            ${showAIAssistant ? 'w-full lg:w-2/3 xl:w-3/4' : 'w-full max-w-5xl'} 
-            h-[calc(100vh-72px)] overflow-y-auto min-h-0 rounded-tl-2xl`}
-        >
-          <NDVIDashboard data={mockNdvi} />
-              </div>
-            </div>
-          )}
+      {/* RIGHT: ndvi panel */}
+      <div
+        className={`bg-black transition-all duration-300 ease-in-out 
+          ${showAIAssistant ? 'w-full lg:w-2/3 xl:w-3/4' : 'w-full max-w-5xl'} 
+          h-[calc(100vh-72px)] overflow-y-auto min-h-0 rounded-tl-2xl`}
+      >
+        <NDVIDashboard data={mockNdvi} />
       </div>
+    </div>
+  )}
+</div>
 
       {/* Hamburger Button for Mobile */}
       {!isPanelOpen && (
