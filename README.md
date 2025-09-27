@@ -300,7 +300,7 @@ export async function detectChange(beforeFile: File, afterFile: File, band?: str
 
 ---
 
-## 🧭 Product Pitch (Hackathon-ready)
+## 🧭 Product Pitch 
 
 - **Problem:** Picking a storefront is risky—rents are high, foot traffic varies, and “market knowledge” is opaque.  
 - **Solution:** A fast, AI-assisted dashboard that blends map context, market signals, comparable properties, and a transparent cost calculator.  
