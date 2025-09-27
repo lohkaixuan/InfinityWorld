@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, User } from 'lucide-react';
 import { ChatMessage } from '../types';
 import { chatSuggestions } from '../data/Data';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface AIAssistantProps {
   onClose: () => void;
@@ -11,11 +10,18 @@ interface AIAssistantProps {
   className?: string;
 }
 
+const OPENAI_API_KEY =
+  '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';
+
+// Choose a lightweight, fast model for UI chat
+const OPENAI_MODEL = 'gpt-4o-mini'; // good balance of cost/speed/quality
+
 const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', className }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      text: "Hello! I'm your location analysis assistant. I can help you understand the data and insights about your selected location. What would you like to know?",
+      text:
+        "Hello! I'm your location analysis assistant. I can help you understand the data and insights about your selected location. What would you like to know?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -24,37 +30,76 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 🔐 Hardcoded Gemini setup
-  const genAI = new GoogleGenerativeAI('AIzaSyDrcso9y-Mtqr33Bkc7CiE10cVg2ykJSG0');
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  useEffect(() => { scrollToBottom(); }, [messages]);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-  // ✅ Fixed: pass a single string to generateContent
-  const fetchGeminiResponse = async (payload: any): Promise<string> => {
-    try {
-      const userJson = JSON.stringify(payload, null, 2);
-      const systemPrompt =
-        "You are an assistant for a location analysis dashboard. Be concise and actionable. " +
-        "Use the JSON context (location, businessType, scale, score, kpis) to answer the user's prompt directly.";
+  // --- OpenAI call (browser fetch) ---
+  const fetchOpenAIResponse = async (payload: any): Promise<string> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000); // 20s
 
-      const prompt = `${systemPrompt}
+    const systemPrompt =
+      "You are an assistant for a location analysis dashboard. Be concise and actionable. " +
+      "Use the JSON context (location, businessType, scale, score, kpis) to answer the user's prompt directly.";
+
+    const userJson = JSON.stringify(payload, null, 2);
+    const userPrompt = `${systemPrompt}
 
 <INPUT_JSON>
 ${userJson}
 </INPUT_JSON>`;
 
-      console.log('[Gemini] sending:', prompt);
+    try {
+      console.log('[OpenAI] → request', { model: OPENAI_MODEL, payload });
 
-      const result = await model.generateContent(prompt);
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+        }),
+        signal: controller.signal,
+      });
 
-      const text = result.response?.text?.() ?? '';
-      console.log('[Gemini] response:', text);
-      return text.trim() || 'Empty response from Gemini.';
+      clearTimeout(timeout);
+
+      const raw = await res.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        /* ignore non-JSON (shouldn't happen) */
+      }
+
+      console.log('[OpenAI] ← status', res.status);
+      if (!res.ok) {
+        const msg =
+          data?.error?.message ||
+          raw ||
+          `HTTP ${res.status} calling OpenAI.`;
+        return `API error: ${msg}`;
+      }
+
+      const text =
+        data?.choices?.[0]?.message?.content?.trim?.() || 'Empty response.';
+      console.log('[OpenAI] parsed text:', text);
+      return text;
     } catch (err: any) {
-      console.error('[Gemini] error:', err);
-      return `Gemini error: ${err?.message || err}`;
+      clearTimeout(timeout);
+      console.error('[OpenAI] fetch error:', err);
+      if (err?.name === 'AbortError') return 'Request timed out. Please try again.';
+      return `Network error: ${err?.message || String(err)}`;
     }
   };
 
@@ -62,11 +107,17 @@ ${userJson}
     if (!text.trim()) return;
 
     const context = {
-      location:       sessionStorage.getItem('lastLocation')     || 'Unknown',
-      businessType:   sessionStorage.getItem('lastBusinessType') || 'Unknown',
-      scale:          sessionStorage.getItem('lastScale')        || 'SME',
-      score:          Number(sessionStorage.getItem('lastScore')) || null,
-      kpis:           (() => { try { return JSON.parse(sessionStorage.getItem('lastKpis') || '{}'); } catch { return {}; } })(),
+      location: sessionStorage.getItem('lastLocation') || 'Unknown',
+      businessType: sessionStorage.getItem('lastBusinessType') || 'Unknown',
+      scale: sessionStorage.getItem('lastScale') || 'SME',
+      score: Number(sessionStorage.getItem('lastScore')) || null,
+      kpis: (() => {
+        try {
+          return JSON.parse(sessionStorage.getItem('lastKpis') || '{}');
+        } catch {
+          return {};
+        }
+      })(),
     };
 
     const payload = {
@@ -81,11 +132,11 @@ ${userJson}
       isUser: true,
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsTyping(true);
 
-    const aiText = await fetchGeminiResponse(payload);
+    const aiText = await fetchOpenAIResponse(payload);
 
     const aiResponse: ChatMessage = {
       id: (Date.now() + 1).toString(),
@@ -93,7 +144,7 @@ ${userJson}
       isUser: false,
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, aiResponse]);
+    setMessages((prev) => [...prev, aiResponse]);
     setIsTyping(false);
   };
 

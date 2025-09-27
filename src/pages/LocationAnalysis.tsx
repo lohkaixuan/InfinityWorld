@@ -234,34 +234,194 @@ async function addElementAsPages(pdf: jsPDF, el: HTMLElement) {
   }
 }
 
-const downloadPDF = async () => {
-  if (!reportRef.current) return;
-
+const downloadPDF = async (
+  opts?: {
+    score?: number;                   // optional override, e.g. computedScore
+    kpisOverride?: {
+      avgRating: number;
+      monthlyDemand: number;
+      competitorCount: number;
+      revenuePotential: number;
+      rentSensitivity?: number;
+    };
+  }
+) => {
   setIsDownloading(true);
-  document.body.classList.add('exporting');
+
+  // ---------- small helpers ----------
+  const fmtNum = (n: number) => n.toLocaleString();
+  const fmtRM  = (n: number) => `RM ${n.toLocaleString()}`;
+  const today  = new Date().toLocaleDateString();
+
+  const kpis = opts?.kpisOverride ?? analysis.kpis;
+  const score = typeof opts?.score === "number" ? opts!.score : analysis.successScore;
+
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 14;
+
+  const addHeader = (title: string) => {
+    pdf.setFillColor(245, 247, 250);
+    pdf.rect(0, 0, pageW, 18, "F");
+    pdf.setTextColor(25, 28, 31);
+    pdf.setFontSize(11);
+    pdf.text(title, margin, 12);
+  };
+  const addFooter = (page: number) => {
+    pdf.setDrawColor(230);
+    pdf.line(margin, pageH - 15, pageW - margin, pageH - 15);
+    pdf.setTextColor(120);
+    pdf.setFontSize(9);
+    pdf.text(`Generated ${today}`, margin, pageH - 7);
+    pdf.text(`Page ${page}`, pageW - margin, pageH - 7, { align: "right" });
+  };
+  const addSectionTitle = (text: string, y: number) => {
+    pdf.setTextColor(35, 38, 42);
+    pdf.setFontSize(14);
+    pdf.text(text, margin, y);
+    pdf.setDrawColor(220);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin, y + 2, pageW - margin, y + 2);
+  };
+  const kpiCard = (x: number, y: number, w: number, h: number, label: string, value: string, color: [number, number, number]) => {
+    // card
+    pdf.setDrawColor(230, 232, 235);
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(x, y, w, h, 3, 3, "FD");
+    // accent
+    pdf.setFillColor(...color);
+    pdf.roundedRect(x, y, 3, h, 2, 2, "F");
+    // text
+    pdf.setTextColor(120);
+    pdf.setFontSize(10);
+    pdf.text(label, x + 7, y + 10);
+    pdf.setTextColor(30);
+    pdf.setFontSize(16);
+    pdf.text(value, x + 7, y + 22);
+  };
+  const progressBar = (x: number, y: number, w: number, val01: number) => {
+    const h = 6;
+    pdf.setDrawColor(225);
+    pdf.roundedRect(x, y, w, h, 3, 3);
+    pdf.setFillColor(30, 144, 255);
+    pdf.roundedRect(x, y, Math.max(0, Math.min(w, w * val01)), h, 3, 3, "F");
+  };
 
   try {
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const margin = 10;
+    // ---------- COVER ----------
+    // header band
+    pdf.setFillColor(18, 122, 255);
+    pdf.rect(0, 0, pageW, 36, "F");
 
-    // Cover
-    pdf.setFontSize(24);
-    pdf.text('Location Analysis Report', margin, 30);
-    pdf.setFontSize(16);
-    pdf.text(`Location: ${location}`, margin, 50);
-    pdf.text(`Business Type: ${businessType}`, margin, 60);
-    pdf.text(`Scale: ${resolvedScale.toUpperCase()} | Score: ${computedScore}`, margin, 70);
-    pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, 80);
+    // white title box
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(margin, 22, pageW - margin * 2, 42, 4, 4, "F");
 
-    // Dashboard pages (ALL charts + text inside reportRef)
+    // title
+    pdf.setTextColor(18, 122, 255);
+    pdf.setFontSize(22);
+    pdf.text("Location Analysis Report", margin + 6, 40);
+
+    // subtitle lines
+    pdf.setTextColor(40);
+    pdf.setFontSize(12);
+    pdf.text(`Location: ${location}`, margin + 6, 54);
+    pdf.text(`Business Type: ${businessType}`, margin + 6, 62);
+    pdf.text(`Generated: ${today}`, margin + 6, 70);
+
+    // big score “dial” (simple ring + number)
+    const centerX = pageW - margin - 35;
+    const centerY = 55;
+    pdf.setDrawColor(235);
+    pdf.setLineWidth(4);
+    pdf.circle(centerX, centerY, 22, "S");
+    // active arc approximation (just a second circle with colored stroke)
+    pdf.setDrawColor(18, 122, 255);
+    pdf.circle(centerX, centerY, 22, "S");
+    pdf.setTextColor(20);
+    pdf.setFontSize(10);
+    pdf.text("Success", centerX, centerY - 2, { align: "center" });
+    pdf.setFontSize(18);
+    pdf.text(`${score}/100`, centerX, centerY + 10, { align: "center" });
+
+    addFooter(1);
+
+    // ---------- PAGE 2: KPIs ----------
     pdf.addPage();
-    await addElementAsPages(pdf, reportRef.current);
+    addHeader("Location Analysis");
+    addSectionTitle("Key Performance Indicators", 28);
 
-    pdf.save('location-analysis-report.pdf');
+    const gridX = margin;
+    const gridY = 40;
+    const cardW = (pageW - margin * 2 - 10) / 2; // 2 columns
+    const cardH = 28;
+    const gap = 10;
+
+    // Row 1
+    kpiCard(gridX,                 gridY,               cardW, cardH, "Revenue Potential", fmtRM(kpis.revenuePotential), [128, 90, 255]);
+    kpiCard(gridX + cardW + gap,   gridY,               cardW, cardH, "Competitor Count",   fmtNum(kpis.competitorCount), [255, 99, 99]);
+    // Row 2
+    kpiCard(gridX,                 gridY + cardH + gap, cardW, cardH, "Avg Rating",         `${kpis.avgRating.toFixed(1)} / 5`, [255, 185, 46]);
+    kpiCard(gridX + cardW + gap,   gridY + cardH + gap, cardW, cardH, "Est. Monthly Demand", `${fmtNum(kpis.monthlyDemand)} visits`, [46, 204, 113]);
+
+    // Optional: rent sensitivity if you have it
+    if (typeof (kpis as any).rentSensitivity === "number") {
+      kpiCard(gridX, gridY + (cardH + gap) * 2, cardW, cardH, "Rent Sensitivity", `${(kpis as any).rentSensitivity}/100`, [66, 133, 244]);
+    }
+
+    // simple bars
+    const barsTop = gridY + (cardH + gap) * 2 + (typeof (kpis as any).rentSensitivity === "number" ? cardH + gap : 6);
+    addSectionTitle("Quick Visuals", barsTop);
+    const bx = margin, bw = pageW - margin * 2, barH = 8;
+    // Demand bar (normalize to a simple scale)
+    const demandVal = Math.min(1, kpis.monthlyDemand / Math.max(12000, kpis.monthlyDemand));
+    pdf.setTextColor(80);
+    pdf.setFontSize(10);
+    pdf.text("Demand", bx, barsTop + 12);
+    progressBar(bx + 24, barsTop + 7, bw - 24, demandVal);
+
+    // Competitors bar (invert: fewer is better)
+    const compVal = Math.min(1, kpis.competitorCount / Math.max(40, kpis.competitorCount));
+    pdf.text("Competition", bx, barsTop + 26);
+    progressBar(bx + 24, barsTop + 21, bw - 24, compVal);
+
+    addFooter(2);
+
+    // ---------- PAGE 3: DEMOGRAPHICS ----------
+    pdf.addPage();
+    addHeader("Location Analysis");
+    addSectionTitle("Demographics", 28);
+
+    pdf.setFontSize(12);
+    pdf.setTextColor(45);
+    const demoY = 44;
+    const officePct = analysis.demographics.office ?? 0;
+    const residentsPct = analysis.demographics.residents ?? 0;
+
+    pdf.text(`Office Workers: ${officePct}%`, margin, demoY);
+    progressBar(margin, demoY + 4, pageW - margin * 2, officePct / 100);
+
+    pdf.text(`Residents: ${residentsPct}%`, margin, demoY + 16);
+    progressBar(margin, demoY + 20, pageW - margin * 2, residentsPct / 100);
+
+    // A short narrative block
+    const blurb =
+      `The area shows a ${officePct}% office worker share and ${residentsPct}% residents. ` +
+      `Combine the ${fmtNum(kpis.monthlyDemand)} monthly visits with ${fmtNum(kpis.competitorCount)} competitors ` +
+      `to align pricing/ops. Revenue potential is ${fmtRM(kpis.revenuePotential)} with an overall success score of ${score}/100.`;
+    pdf.setTextColor(90);
+    pdf.setFontSize(11);
+    const blurbLines = pdf.splitTextToSize(blurb, pageW - margin * 2);
+    pdf.text(blurbLines, margin, demoY + 36);
+
+    addFooter(3);
+
+    // ---------- SAVE ----------
+    pdf.save("location-analysis-report.pdf");
   } catch (err) {
-    console.error('Error generating PDF:', err);
+    console.error("Error generating PDF:", err);
   } finally {
-    document.body.classList.remove('exporting');
     setIsDownloading(false);
   }
 };
