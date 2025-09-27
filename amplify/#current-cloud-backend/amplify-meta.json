@@ -1,16 +1,61 @@
 {
   "providers": {
     "awscloudformation": {
-      "AuthRoleName": "amplify-bizlocate-main-authRole",
-      "UnauthRoleName": "amplify-bizlocate-main-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::235881043191:role/amplify-bizlocate-main-authRole",
-      "UnauthRoleArn": "arn:aws:iam::235881043191:role/amplify-bizlocate-main-unauthRole",
-      "Region": "us-east-1",
-      "DeploymentBucketName": "amplify-bizlocate-main-deployment",
-      "UnauthRolePolicy": "amplify-bizlocate-main-unauthRolePolicy",
-      "StackName": "amplify-bizlocate-main",
-      "StackId": "arn:aws:cloudformation:us-east-1:235881043191:stack/amplify-bizlocate-main/12345678-1234-1234-1234-123456789012",
-      "AmplifyAppId": "dykplvtlo25r5"
+      "AuthRoleName": "amplify-infinityworld-dev-6c404-authRole",
+      "UnauthRoleArn": "arn:aws:iam::979237821101:role/amplify-infinityworld-dev-6c404-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::979237821101:role/amplify-infinityworld-dev-6c404-authRole",
+      "Region": "ap-southeast-1",
+      "DeploymentBucketName": "amplify-infinityworld-dev-6c404-deployment",
+      "UnauthRoleName": "amplify-infinityworld-dev-6c404-unauthRole",
+      "StackName": "amplify-infinityworld-dev-6c404",
+      "StackId": "arn:aws:cloudformation:ap-southeast-1:979237821101:stack/amplify-infinityworld-dev-6c404/c7fc4600-9b85-11f0-b655-0a3361243e3f",
+      "AmplifyAppId": "d3hrlc150dgs5g"
+    }
+  },
+  "api": {
+    "locationanalysisapi": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "Name",
+            "Arn"
+          ],
+          "category": "function",
+          "resourceName": "bedrockChat"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "API Gateway",
+      "lastPushDirHash": "keDyx7/pNMQgJL94UxtyuS9ohEc=",
+      "lastPushTimeStamp": "2025-09-27T09:54:09.990Z"
+    }
+  },
+  "function": {
+    "bedrockChat": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda",
+      "lastBuildTimeStamp": "2025-09-27T09:52:27.534Z",
+      "lastBuildType": "PROD",
+      "lastPackageTimeStamp": "2025-09-27T09:52:35.929Z",
+      "distZipFilename": "bedrockChat-62414342506b51473176-build.zip",
+      "s3Bucket": {
+        "deploymentBucketName": "amplify-infinityworld-dev-6c404-deployment",
+        "s3Key": "amplify-builds/bedrockChat-62414342506b51473176-build.zip"
+      },
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-infinityworld-dev-6c404-deployment/amplify-cfn-templates/function/bedrockChat-cloudformation-template.json",
+        "logicalId": "functionbedrockChat"
+      },
+      "lastPushTimeStamp": "2025-09-27T09:54:09.990Z",
+      "output": {
+        "LambdaExecutionRoleArn": "arn:aws:iam::979237821101:role/locationanalysisLambdaRole-dev",
+        "Region": "ap-southeast-1",
+        "Arn": "arn:aws:lambda:ap-southeast-1:979237821101:function:bedrockChat-dev",
+        "Name": "bedrockChat-dev",
+        "LambdaExecutionRole": "locationanalysisLambdaRole-dev"
+      },
+      "lastPushDirHash": "r8UrnZ1ZvhQhSuwgPTb48QTFVaI="
     }
   }
 }
