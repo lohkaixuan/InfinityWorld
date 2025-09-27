@@ -27,7 +27,8 @@ import { useGoogleMaps } from "../hooks/useGoogleMaps";
 import jsPDF from "jspdf";
 
 import html2canvas from "html2canvas";
-
+import NDVIDashboard from "../components/ndvi/NDVIDashboard";
+import { mockNdvi } from "../data/mockNDVI";
 
 interface LocationAnalysisProps {
   location: string;
@@ -299,7 +300,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
                 : "bg-green-600 text-white hover:bg-green-700"
             }`}
           >
-            NDVI
+            Development Trend
           </button>
 
           <button
@@ -329,7 +330,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
           >
             {/* LEFT: AI Chat */}
             {showAIAssistant && (
-              <div className="hidden lg:block w-2/3">
+              <div className="hidden lg:block w-1/3">
                 <div className="sticky top-[72px] h-[calc(100vh-72px)]">
                   <AIAssistant
                     variant="dock"
@@ -379,7 +380,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
                         : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
-                    Competitor Nearby
+                    Similar Business Nearby
                   </button>
                   <button
                     onClick={() => setActiveTab("rent")}
@@ -446,7 +447,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
           >
             {/* LEFT: AI Chat */}
             {showAIAssistant && (
-              <div className="hidden lg:block w">
+              <div className="hidden lg:block w-1/3">
                 <div className="sticky top-[72px] h-[calc(100vh-72px)]">
                   <AIAssistant
                     variant="dock"
@@ -501,7 +502,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
       </div>
 
 
- {/* ndvi only */}
+      {/* ndvi only */}
       <div
         className={`transition-all ${
           view === "ndvi" ? "w-full" : "hidden"
@@ -516,7 +517,7 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
           >
             {/* LEFT: AI Chat */}
             {showAIAssistant && (
-              <div className="hidden lg:block w-2/3">
+              <div className="hidden lg:block w-1/3">
                 <div className="sticky top-[72px] h-[calc(100vh-72px)]">
                   <AIAssistant
                     variant="dock"
@@ -527,18 +528,18 @@ const LocationAnalysis: React.FC<LocationAnalysisProps> = ({
               </div>
             )}
 
-            {/* RIGHT: ndvi panel */}
-            <div
-              className={`bg-white border-r border-gray-200 transition-all duration-300 ease-in-out 
-                          ${
-                            showAIAssistant
-                              ? "w-full lg:w-2/3 xl:w-3/4"
-                              : "w-full max-w-5xl"
-                          } 
-                          h-[calc(100vh-72px)] overflow-y-auto min-h-0`}
-            ></div>
+        {/* RIGHT: ndvi panel */}
+        <div
+          className={`bg-black transition-all duration-300 ease-in-out 
+            ${showAIAssistant ? 'w-full lg:w-2/3 xl:w-3/4' : 'w-full max-w-5xl'} 
+            h-[calc(100vh-72px)] overflow-y-auto min-h-0 rounded-tl-2xl`}
+        >
+          <NDVIDashboard data={mockNdvi} />
+              </div>
+            </div>
+          )}
+      </div>
 
-          </div>
       {/* Hamburger Button for Mobile */}
       {!isPanelOpen && (
         <button
