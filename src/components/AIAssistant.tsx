@@ -9,12 +9,10 @@ interface AIAssistantProps {
   variant?: 'modal' | 'dock';
   className?: string;
 }
-
-const OPENAI_API_KEY =
-  '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';
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_KEY as string;
 
 // Choose a lightweight, fast model for UI chat
-const OPENAI_MODEL = 'gpt-4o-mini'; // good balance of cost/speed/quality
+const OPENAI_MODEL = 'gpt-4o-mini'; // good balance of cost/speed/  quality
 
 const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', className }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
