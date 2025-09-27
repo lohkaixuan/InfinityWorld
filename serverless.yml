@@ -1,17 +1,17 @@
-service: location-analysis-api
+service: infinityworld-api
 
 provider:
-  name: aws
-  runtime: nodejs18.x
-  region: us-east-1
-  environment:
-    NODE_ENV: production
+    name: aws
+    runtime: nodejs18.x
+    region: ap-southeast-1
+    environment:
+        NODE_ENV: production
 
 functions:
-  bedrockChat:
-    handler: api/bedrock-chat.handler
-    events:
-      - http:
-          path: /api/bedrock-chat
-          method: post
-          cors: true
+    bedrockChat:
+        handler: api/bedrock-chat.handler
+        events:
+            - http:
+                  path: /api/bedrock-chat
+                  method: post
+                  cors: true

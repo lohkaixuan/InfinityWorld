@@ -1,6 +1,6 @@
 {
   "api": {
-    "locationanalysisapi": {
+    "infinityworldapi": {
       "dependsOn": [
         {
           "attributes": [
@@ -8,7 +8,7 @@
             "Arn"
           ],
           "category": "function",
-          "resourceName": "bedrockChat"
+          "resourceName": "bedrockchatlambda"
         }
       ],
       "providerPlugin": "awscloudformation",
@@ -16,26 +16,26 @@
     }
   },
   "function": {
-    "bedrockChat": {
+    "bedrockchatlambda": {
       "build": true,
       "providerPlugin": "awscloudformation",
       "service": "Lambda"
     }
   },
   "parameters": {
-    "AMPLIFY_function_bedrockChat_deploymentBucketName": {
+    "AMPLIFY_function_bedrockchatlambda_deploymentBucketName": {
       "usedBy": [
         {
           "category": "function",
-          "resourceName": "bedrockChat"
+          "resourceName": "bedrockchatlambda"
         }
       ]
     },
-    "AMPLIFY_function_bedrockChat_s3Key": {
+    "AMPLIFY_function_bedrockchatlambda_s3Key": {
       "usedBy": [
         {
           "category": "function",
-          "resourceName": "bedrockChat"
+          "resourceName": "bedrockchatlambda"
         }
       ]
     }

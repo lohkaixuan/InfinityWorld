@@ -1,5 +1,5 @@
 {
   "projectPath": "U:\\Projects\\InfinityWorld",
-  "defaultEditor": "code",
-  "envName": "dev"
+  "defaultEditor": "vscode",
+  "envName": "prod"
 }

@@ -27,7 +27,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # Deploy to AWS Amplify
 Write-Host "🌐 Creating Amplify app..." -ForegroundColor Yellow
-$appName = "location-analysis-app"
+$appName = "infinityworld"
 
 # Create Amplify app with environment variables
 $amplifyApp = aws amplify create-app --name $appName --platform WEB --build-spec (Get-Content amplify.yml -Raw) --custom-rules '[{"source":"/<*>","target":"/index.html","status":"404-200"}]' --environment-variables VITE_GOOGLE_MAPS_API_KEY=AIzaSyCcdHqF_kBE-E9Fq3JuiCife-XImYsjGlQ 2>$null
@@ -43,7 +43,8 @@ if ($amplifyApp) {
     aws amplify start-deployment --app-id $appId --branch-name main --source-url "."
     
     Write-Host "🎉 Frontend deployed! Check AWS Amplify Console for URL" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "⚠️  Amplify app might already exist. Check AWS Console." -ForegroundColor Yellow
 }
 

@@ -9,7 +9,7 @@ if (Test-Path "lambda-deployment.zip") { Remove-Item "lambda-deployment.zip" }
 # Create a temporary package.json for Lambda
 @"
 {
-  "name": "bedrock-chat-lambda",
+  "name": "bedrockchatlambda-prod",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
@@ -31,32 +31,33 @@ Pop-Location
 Compress-Archive -Path "lambda-temp/*" -DestinationPath "lambda-deployment.zip" -Force
 
 # Create Lambda function
-$functionName = "location-analysis-bedrock-chat"
+$functionName = "infinityworld-bedrock-chat"
 
 Write-Host "☁️ Creating Lambda function..." -ForegroundColor Yellow
 aws lambda create-function `
   --function-name $functionName `
   --runtime nodejs18.x `
-  --role arn:aws:iam::235881043191:role/lambda-execution-role `
+  --role arn:aws:iam::979237821101:role/lambda-execution-role `
   --handler bedrock-chat.handler `
   --zip-file fileb://lambda-deployment.zip `
   --timeout 30 `
   --memory-size 256
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Lambda function created successfully!" -ForegroundColor Green
+  Write-Host "✅ Lambda function created successfully!" -ForegroundColor Green
     
-    # Create API Gateway
-    Write-Host "🌐 Creating API Gateway..." -ForegroundColor Yellow
-    $apiId = (aws apigateway create-rest-api --name "location-analysis-api" --query 'id' --output text)
+  # Create API Gateway
+  Write-Host "🌐 Creating API Gateway..." -ForegroundColor Yellow
+  $apiId = (aws apigateway create-rest-api --name "infinityworldapi" --query 'id' --output text)
     
-    if ($apiId) {
-        Write-Host "✅ API Gateway created: $apiId" -ForegroundColor Green
-        Write-Host "📋 Next: Configure API Gateway in AWS Console" -ForegroundColor Cyan
-    }
-} else {
-    Write-Host "⚠️ Function might already exist. Updating..." -ForegroundColor Yellow
-    aws lambda update-function-code --function-name $functionName --zip-file fileb://lambda-deployment.zip
+  if ($apiId) {
+    Write-Host "✅ API Gateway created: $apiId" -ForegroundColor Green
+    Write-Host "📋 Next: Configure API Gateway in AWS Console" -ForegroundColor Cyan
+  }
+}
+else {
+  Write-Host "⚠️ Function might already exist. Updating..." -ForegroundColor Yellow
+  aws lambda update-function-code --function-name $functionName --zip-file fileb://lambda-deployment.zip
 }
 
 # Cleanup
