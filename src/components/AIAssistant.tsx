@@ -28,7 +28,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
 
   const fetchBedrockResponse = async (userMessage: string): Promise<string> => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/bedrock-chat';
+      const apiUrl = "https://qze1ayrtf4.execute-api.ap-southeast-1.amazonaws.com/prod/api/bedrock-chat";
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,6 +44,17 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
 
   const handleSendMessage = async (text: string = inputValue) => {
     if (!text.trim()) return;
+
+    // Wrap context into JSON for backend
+    const contextPayload = {
+      location: sessionStorage.getItem("lastLocation") || "Unknown",
+      businessType: sessionStorage.getItem("lastBusinessType") || "Unknown",
+      scale: sessionStorage.getItem("lastScale") || "SME",
+      score: sessionStorage.getItem("lastScore") || null,
+      kpis: JSON.parse(sessionStorage.getItem("lastKpis") || "{}"),
+      userPrompt: text.trim(),
+    };
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       text: text.trim(),
@@ -54,7 +65,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
     setInputValue('');
     setIsTyping(true);
 
-    const aiText = await fetchBedrockResponse(text);
+    // 🚀 Send JSON instead of plain text
+    const aiText = await fetchBedrockResponse(JSON.stringify(contextPayload, null, 2));
+
     const aiResponse: ChatMessage = {
       id: (Date.now() + 1).toString(),
       text: aiText,
@@ -64,6 +77,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, variant = 'modal', c
     setMessages(prev => [...prev, aiResponse]);
     setIsTyping(false);
   };
+
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
