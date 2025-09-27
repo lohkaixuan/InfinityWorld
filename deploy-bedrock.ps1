@@ -54,7 +54,7 @@ try {
     $apiUrl = amplify status --json | ConvertFrom-Json | Select-Object -ExpandProperty api
     if ($apiUrl) {
         Write-Host "✅ API Gateway endpoint configured" -ForegroundColor Green
-        Write-Host "   Endpoint: $($apiUrl.locationanalysisapi.GraphQLAPIEndpoint)" -ForegroundColor Gray
+        Write-Host "   Endpoint: $($apiUrl.infinityworldapi.GraphQLAPIEndpoint)" -ForegroundColor Gray
     }
 } catch {
     Write-Host "⚠️  Could not retrieve API endpoint. Check amplify status" -ForegroundColor Yellow

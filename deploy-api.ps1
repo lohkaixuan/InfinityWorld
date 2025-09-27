@@ -1,12 +1,12 @@
 # Complete Lambda + API Gateway deployment script
 
 param(
-    [string]$Region = "us-east-1",
-    [string]$AccountId = "235881043191"
+  [string]$Region = "ap-southeast-1",
+  [string]$AccountId = "979237821101"
 )
 
-$functionName = "location-analysis-bedrock-chat"
-$apiName = "location-analysis-api"
+$functionName = "bedrockchatlambda"
+$apiName = "infinityworld-api"
 
 Write-Host "🚀 Deploying Lambda + API Gateway..." -ForegroundColor Green
 
@@ -16,7 +16,7 @@ if (Test-Path "lambda-deployment.zip") { Remove-Item "lambda-deployment.zip" }
 
 $packageJson = @'
 {
-  "name": "bedrock-chat-lambda",
+  "name": "bedrockchatlambda",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
@@ -51,8 +51,8 @@ aws lambda create-function `
   --region $Region 2>$null
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "⚠️ Function exists. Updating..." -ForegroundColor Yellow
-    aws lambda update-function-code --function-name $functionName --zip-file fileb://lambda-deployment.zip --region $Region
+  Write-Host "⚠️ Function exists. Updating..." -ForegroundColor Yellow
+  aws lambda update-function-code --function-name $functionName --zip-file fileb://lambda-deployment.zip --region $Region
 }
 
 # Create API Gateway
@@ -60,8 +60,8 @@ Write-Host "🌐 Creating API Gateway..." -ForegroundColor Yellow
 $apiId = (aws apigateway create-rest-api --name $apiName --region $Region --query 'id' --output text 2>$null)
 
 if (-not $apiId) {
-    $apiId = (aws apigateway get-rest-apis --region $Region --query "items[?name=='$apiName'].id" --output text)
-    Write-Host "⚠️ API Gateway exists. Using existing: $apiId" -ForegroundColor Yellow
+  $apiId = (aws apigateway get-rest-apis --region $Region --query "items[?name=='$apiName'].id" --output text)
+  Write-Host "⚠️ API Gateway exists. Using existing: $apiId" -ForegroundColor Yellow
 }
 
 # Get root resource ID
@@ -70,13 +70,13 @@ $rootResourceId = (aws apigateway get-resources --rest-api-id $apiId --region $R
 # Create /api resource
 $apiResourceId = (aws apigateway create-resource --rest-api-id $apiId --parent-id $rootResourceId --path-part "api" --region $Region --query 'id' --output text 2>$null)
 if (-not $apiResourceId) {
-    $apiResourceId = (aws apigateway get-resources --rest-api-id $apiId --region $Region --query 'items[?pathPart==`api`].id' --output text)
+  $apiResourceId = (aws apigateway get-resources --rest-api-id $apiId --region $Region --query 'items[?pathPart==`api`].id' --output text)
 }
 
 # Create /bedrock-chat resource
 $chatResourceId = (aws apigateway create-resource --rest-api-id $apiId --parent-id $apiResourceId --path-part "bedrock-chat" --region $Region --query 'id' --output text 2>$null)
 if (-not $chatResourceId) {
-    $chatResourceId = (aws apigateway get-resources --rest-api-id $apiId --region $Region --query 'items[?pathPart==`bedrock-chat`].id' --output text)
+  $chatResourceId = (aws apigateway get-resources --rest-api-id $apiId --region $Region --query 'items[?pathPart==`bedrock-chat`].id' --output text)
 }
 
 # Create POST method

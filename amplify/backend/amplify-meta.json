@@ -1,19 +1,19 @@
 {
   "providers": {
     "awscloudformation": {
-      "AuthRoleName": "amplify-infinityworld-dev-6c404-authRole",
-      "UnauthRoleArn": "arn:aws:iam::979237821101:role/amplify-infinityworld-dev-6c404-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::979237821101:role/amplify-infinityworld-dev-6c404-authRole",
+      "AuthRoleName": "amplify-infinityworld-prod-733ad-authRole",
+      "UnauthRoleArn": "arn:aws:iam::979237821101:role/amplify-infinityworld-prod-733ad-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::979237821101:role/amplify-infinityworld-prod-733ad-authRole",
       "Region": "ap-southeast-1",
-      "DeploymentBucketName": "amplify-infinityworld-dev-6c404-deployment",
-      "UnauthRoleName": "amplify-infinityworld-dev-6c404-unauthRole",
-      "StackName": "amplify-infinityworld-dev-6c404",
-      "StackId": "arn:aws:cloudformation:ap-southeast-1:979237821101:stack/amplify-infinityworld-dev-6c404/c7fc4600-9b85-11f0-b655-0a3361243e3f",
-      "AmplifyAppId": "d3hrlc150dgs5g"
+      "DeploymentBucketName": "amplify-infinityworld-prod-733ad-deployment",
+      "UnauthRoleName": "amplify-infinityworld-prod-733ad-unauthRole",
+      "StackName": "amplify-infinityworld-prod-733ad",
+      "StackId": "arn:aws:cloudformation:ap-southeast-1:979237821101:stack/amplify-infinityworld-prod-733ad/dd637200-9ba0-11f0-855e-06ae042d3311",
+      "AmplifyAppId": "d27d40xsax0hi0"
     }
   },
   "api": {
-    "locationanalysisapi": {
+    "infinityworldapi": {
       "dependsOn": [
         {
           "attributes": [
@@ -21,41 +21,44 @@
             "Arn"
           ],
           "category": "function",
-          "resourceName": "bedrockChat"
+          "resourceName": "bedrockchatlambda"
         }
       ],
       "providerPlugin": "awscloudformation",
       "service": "API Gateway",
-      "lastPushDirHash": "keDyx7/pNMQgJL94UxtyuS9ohEc=",
-      "lastPushTimeStamp": "2025-09-27T09:54:09.990Z"
+      "output": {
+        "ApiName": "infinityworldapi",
+        "RootUrl": "https://qze1ayrtf4.execute-api.ap-southeast-1.amazonaws.com/prod",
+        "ApiId": "qze1ayrtf4"
+      },
+      "lastPushTimeStamp": "2025-09-27T13:44:50.218Z",
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-infinityworld-prod-733ad-deployment/amplify-cfn-templates/api/infinityworldapi-cloudformation-template.json",
+        "logicalId": "apiinfinityworldapi"
+      }
     }
   },
   "function": {
-    "bedrockChat": {
+    "bedrockchatlambda": {
       "build": true,
       "providerPlugin": "awscloudformation",
       "service": "Lambda",
-      "lastBuildTimeStamp": "2025-09-27T09:52:27.534Z",
-      "lastBuildType": "PROD",
-      "lastPackageTimeStamp": "2025-09-27T09:52:35.929Z",
-      "distZipFilename": "bedrockChat-62414342506b51473176-build.zip",
-      "s3Bucket": {
-        "deploymentBucketName": "amplify-infinityworld-dev-6c404-deployment",
-        "s3Key": "amplify-builds/bedrockChat-62414342506b51473176-build.zip"
-      },
-      "providerMetadata": {
-        "s3TemplateURL": "https://s3.amazonaws.com/amplify-infinityworld-dev-6c404-deployment/amplify-cfn-templates/function/bedrockChat-cloudformation-template.json",
-        "logicalId": "functionbedrockChat"
-      },
-      "lastPushTimeStamp": "2025-09-27T09:54:09.990Z",
       "output": {
-        "LambdaExecutionRoleArn": "arn:aws:iam::979237821101:role/locationanalysisLambdaRole-dev",
+        "LambdaExecutionRoleArn": "arn:aws:iam::979237821101:role/infinityworldLambdaRolea1687b05-prod",
         "Region": "ap-southeast-1",
-        "Arn": "arn:aws:lambda:ap-southeast-1:979237821101:function:bedrockChat-dev",
-        "Name": "bedrockChat-dev",
-        "LambdaExecutionRole": "locationanalysisLambdaRole-dev"
+        "Arn": "arn:aws:lambda:ap-southeast-1:979237821101:function:bedrockchatlambda-prod",
+        "Name": "bedrockchatlambda-prod",
+        "LambdaExecutionRole": "infinityworldLambdaRolea1687b05-prod"
       },
-      "lastPushDirHash": "r8UrnZ1ZvhQhSuwgPTb48QTFVaI="
+      "lastPushTimeStamp": "2025-09-27T13:44:50.220Z",
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-infinityworld-prod-733ad-deployment/amplify-cfn-templates/function/bedrockchatlambda-cloudformation-template.json",
+        "logicalId": "functionbedrockchatlambda"
+      },
+      "s3Bucket": {
+        "deploymentBucketName": "amplify-infinityworld-prod-733ad-deployment",
+        "s3Key": "amplify-builds/bedrockchatlambda-763975534c397855684a-build.zip"
+      }
     }
   }
 }

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "paths": {
+    "/api/bedrock-chat": {
+      "name": "/api/bedrock-chat",
+      "lambdaFunction": "bedrockchatlambda",
+      "permissions": {
+        "setting": "open"
+      }
+    }
+  }
+}
