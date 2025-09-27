@@ -95,7 +95,7 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
   return (
     <div
       className="w-full h-screen bg-cover bg-center overflow-hidden"
-      style={{ backgroundImage: "url('assets/background.jpg')" }}
+      style={{ backgroundImage: "url('/background.jpg')" }}
     >
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-5xl">
@@ -104,7 +104,7 @@ const LocationRequest: React.FC<LocationRequestProps> = ({ onSubmit }) => {
             <div className="mt-8 text-black text-center">
               <div className="flex items-center justify-center">
                 <img
-                  src="assets/logo.png"
+                  src="/logo.png"
                   alt="Logo"
                   className="w-20 h-auto object-contain"
                 />

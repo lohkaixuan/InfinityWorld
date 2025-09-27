@@ -194,8 +194,8 @@ const NDVIDashboard: React.FC<Props> = ({ data }) => {
             </button>
 
             <BeforeAfterFlip
-              beforeSrc="assets/before.png"
-              afterSrc="assets/after.png"
+              beforeSrc="/before.png"
+              afterSrc="/after.png"
               intervalMs={1600}
               className="h-[70vh] sm:h-[75vh] lg:h-[80vh]"  // big height in fullscreen
               playing={true}
